@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="A simple daily to-do and reminder planner.">
+<meta name="theme-color" content="#2a4bd7">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232a4bd7'/%3E%3Cpath d='M9 16.5l4.5 4.5L23 11' fill='none' stroke='white' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<title>Daily Checklist</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@500&display=swap">
+<style>\nhtml{{color-scheme:light}}\nbody{{margin:0;font-family:system-ui,sans-serif}}\n[hidden]{{display:none!important}}\n:root{{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}}
+/* Layout: one narrow planner column — week strip, today's progress, add bar, then a time-ordered list */
+:root{
+  --bg:#f4f6fb; --surface:#ffffff; --ink:#151a2b; --muted:#646c84; --line:#dfe3ee;
+  --accent:#2a4bd7; --accent-soft:#e3e8fc; --due:#c2410c; --due-soft:#fdebe1; --ok:#15803d;
+  --t-school:#2a4bd7; --t-work:#7c3aed; --t-personal:#0f766e; --t-errand:#b45309;
+  --f-display:"Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+  --f-body:"Atkinson Hyperlegible", ui-sans-serif, system-ui, sans-serif;
+  --f-mono:"JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#10131c; --surface:#181c28; --ink:#e8ebf4; --muted:#9aa2ba; --line:#2a3042;
+  --accent:#7d95ff; --accent-soft:#232c52; --due:#fb923c; --due-soft:#3a2418; --ok:#4ade80;
+  --t-school:#7d95ff; --t-work:#b794fa; --t-personal:#4fd1c0; --t-errand:#f0b35a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#10131c; --surface:#181c28; --ink:#e8ebf4; --muted:#9aa2ba; --line:#2a3042;
+  --accent:#7d95ff; --accent-soft:#232c52; --due:#fb923c; --due-soft:#3a2418; --ok:#4ade80;
+  --t-school:#7d95ff; --t-work:#b794fa; --t-personal:#4fd1c0; --t-errand:#f0b35a; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.5}
+.wrap{max-width:640px;margin:0 auto;padding-inline:16px;padding-block:28px 64px;display:flex;flex-direction:column;gap:20px}
+header{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+h1{font-family:var(--f-display);font-weight:800;font-size:clamp(28px,7vw,40px);line-height:1.05;margin:2px 0 0;text-wrap:balance}
+.navbtns{display:flex;gap:6px}
+button{font:inherit;color:inherit;cursor:pointer}
+.ghost{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:6px 12px;font-size:14px}
+.ghost:hover{border-color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.week{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.day{background:transparent;border:1px solid transparent;border-radius:12px;padding:8px 0 6px;display:flex;flex-direction:column;align-items:center;gap:2px}
+.day .dw{font-family:var(--f-mono);font-size:11px;color:var(--muted);text-transform:uppercase}
+.day .dn{font-family:var(--f-display);font-weight:600;font-size:20px;font-variant-numeric:tabular-nums}
+.day .dots{height:6px;display:flex;gap:3px}
+.day .dots i{width:5px;height:5px;border-radius:50%;background:var(--muted);opacity:.5}
+.day .dots i.done{background:var(--ok);opacity:1}
+.day:hover{border-color:var(--line)}
+.day.today .dn{color:var(--accent)}
+.day.sel{background:var(--surface);border-color:var(--accent)}
+
+.progress{display:flex;align-items:center;gap:14px}
+.bar{flex:1;height:10px;background:var(--line);border-radius:99px;overflow:hidden}
+.bar span{display:block;height:100%;background:var(--accent);border-radius:99px;transition:width .3s}
+.pct{font-family:var(--f-mono);font-size:14px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+
+form.add{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:8px}
+.add input[type=text]{border:0;background:transparent;font:inherit;font-size:17px;color:var(--ink);padding:6px 6px;width:100%}
+.add input[type=text]:focus{outline:none}
+.add .row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.add select,.add input[type=time]{font:inherit;font-size:14px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:5px 8px}
+.add .submit{margin-left:auto;background:var(--accent);color:var(--surface);border:0;border-radius:9px;padding:7px 16px;font-weight:700}
+
+.toast{background:var(--due-soft);color:var(--due);border-radius:12px;padding:10px 14px;font-weight:700;display:flex;justify-content:space-between;gap:10px;align-items:center}
+.toast button{background:none;border:0;color:inherit;text-decoration:underline;font-size:14px}
+
+section h2{font-family:var(--f-mono);font-weight:500;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 6px;display:flex;justify-content:space-between}
+ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+li.task{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:11px 4px;border-bottom:1px solid var(--line)}
+li.task:last-child{border-bottom:0}
+.check{width:24px;height:24px;border-radius:7px;border:2px solid var(--muted);background:transparent;display:grid;place-items:center;padding:0}
+.check svg{width:14px;height:14px;opacity:0}
+li.done .check{background:var(--ok);border-color:var(--ok)}
+li.done .check svg{opacity:1}
+.body{min-width:0}
+.title{overflow-wrap:anywhere}
+li.done .title{text-decoration:line-through;color:var(--muted)}
+.meta{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:2px;font-size:13px;color:var(--muted)}
+.time{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.tag{display:inline-flex;align-items:center;gap:5px}
+.tag::before{content:"";width:8px;height:8px;border-radius:2px;background:var(--c)}
+.chip{font-family:var(--f-mono);font-size:11px;padding:1px 7px;border-radius:99px;text-transform:uppercase;letter-spacing:.04em}
+.chip.due{background:var(--due-soft);color:var(--due)}
+.chip.rep{background:var(--accent-soft);color:var(--accent)}
+.chip.ex{border:1px dashed var(--muted)}
+.del{background:none;border:0;color:var(--muted);font-size:20px;line-height:1;padding:4px 8px;border-radius:8px;opacity:.6}
+.del:hover{opacity:1;color:var(--due)}
+.empty{color:var(--muted);padding:18px 4px;border:1px dashed var(--line);border-radius:12px;text-align:center}
+footer{font-size:13px;color:var(--muted);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.footbtns{display:flex;gap:14px}
+footer button{background:none;border:0;color:var(--muted);text-decoration:underline;font-size:13px;padding:0}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div>
+      <div class="eyebrow" id="eyebrow">Today</div>
+      <h1 id="heading">Tuesday, Oct 13</h1>
+    </div>
+    <div class="navbtns">
+      <button class="ghost" id="prev" aria-label="Previous week">←</button>
+      <button class="ghost" id="todayBtn">Today</button>
+      <button class="ghost" id="next" aria-label="Next week">→</button>
+    </div>
+  </header>
+
+  <div class="week" id="week"></div>
+
+  <div class="progress">
+    <div class="bar"><span id="barFill" style="width:0"></span></div>
+    <div class="pct" id="pct">0 of 0 done</div>
+  </div>
+
+  <div class="toast" id="toast" hidden><span id="toastText"></span><button id="toastClose">Dismiss</button></div>
+
+  <form class="add" id="addForm" autocomplete="off">
+    <input type="text" id="newTitle" placeholder="Add something to do…" aria-label="Task">
+    <div class="row">
+      <input type="time" id="newTime" aria-label="Reminder time">
+      <select id="newTag" aria-label="Category">
+        <option value="school">School</option>
+        <option value="work">Work</option>
+        <option value="personal" selected>Personal</option>
+        <option value="errand">Errand</option>
+      </select>
+      <select id="newRepeat" aria-label="Repeat">
+        <option value="none">Just this day</option>
+        <option value="daily">Every day</option>
+        <option value="weekdays">Weekdays</option>
+      </select>
+      <button class="submit" type="submit">Add</button>
+    </div>
+  </form>
+
+  <section id="overdueSec" hidden>
+    <h2><span>Carried over</span><span id="overdueCount"></span></h2>
+    <ul id="overdueList"></ul>
+  </section>
+
+  <section>
+    <h2><span id="listLabel">Today's list</span><span id="listCount"></span></h2>
+    <ul id="list"></ul>
+  </section>
+
+  <footer>
+    <span id="storeNote">Saved in this browser.</span>
+    <span class="footbtns">
+      <button id="clearEx" hidden>Remove example tasks</button>
+      <button id="exportBtn">Export</button>
+      <button id="importBtn">Import</button>
+      <input type="file" id="importFile" accept="application/json,.json" hidden>
+    </span>
+  </footer>
+</div>
+
+<script>
+(function(){
+  const KEY = "daily-checklist-v1";
+  const TAGS = {school:"School",work:"Work",personal:"Personal",errand:"Errand"};
+  const pad = n => String(n).padStart(2,"0");
+  const iso = d => d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+  const parse = s => { const [y,m,d]=s.split("-").map(Number); return new Date(y,m-1,d); };
+  const addDays = (s,n) => { const d=parse(s); d.setDate(d.getDate()+n); return iso(d); };
+  const todayISO = () => iso(new Date());
+  const uid = () => Math.random().toString(36).slice(2,10);
+
+  // Storage: each signed-in person's tasks live in their own private cloud doc
+  // (data/users/<id>/planner). Falls back to this browser's storage when that isn't available.
+  let mode = "loading";      // loading | cloud | local
+  let note = "";              // extra footer message (errors)
+  let cloudRef = null, dirty = false, writing = false, saveTimer = null, myName = "";
+
+  function readLocal(){
+    try { const raw = localStorage.getItem(KEY); if (raw) return JSON.parse(raw); } catch(e){}
+    return null;
+  }
+  function writeLocal(){
+    try { localStorage.setItem(KEY, JSON.stringify(state)); return true; } catch(e){ return false; }
+  }
+  function clean(s){
+    s = s && typeof s === "object" ? s : {};
+    const tasks = Array.isArray(s.tasks) ? s.tasks.filter(x => x && x.id && x.title) : [];
+    tasks.forEach(x => { if (!Array.isArray(x.doneOn)) x.doneOn = []; });
+    // keep only today's dismissed reminders so the doc doesn't grow forever
+    const d = {}, today = todayISO();
+    Object.keys(s.dismissed || {}).forEach(k => { if (k.endsWith(today)) d[k] = 1; });
+    return { tasks, dismissed: d };
+  }
+
+  function save(){
+    if (mode === "local"){ if (!writeLocal()) note = "This browser is blocking storage, so tasks reset when you leave."; return; }
+    if (mode !== "cloud") return;
+    dirty = true;
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(flush, 400);
+  }
+  async function flush(){
+    if (writing || !dirty || !cloudRef) return;
+    writing = true; dirty = false;
+    try {
+      await cloudRef.set({ tasks: state.tasks, dismissed: state.dismissed, updatedAt: Date.now() });
+      if (note && note.startsWith("Couldn't")) { note = ""; renderFooter(); }
+    } catch(e){
+      const code = e && e.code;
+      if (code === "invalid_argument") note = "You have view-only access here, so changes won't be saved. Ask the owner for Contributor access.";
+      else if (code === "quota_exceeded") note = "Storage is full. Delete some old tasks to keep saving.";
+      else { note = "Couldn't save just now. Retrying…"; dirty = true; setTimeout(flush, 2000 + Math.random()*1000); }
+      renderFooter();
+    } finally {
+      writing = false;
+      if (dirty) setTimeout(flush, 50);
+    }
+  }
+
+  let state = { tasks: [], dismissed: {} };
+  let sel = todayISO();
+
+  const $ = id => document.getElementById(id);
+
+  function appliesOn(task, day){
+    if (task.repeat === "none") return task.date === day;
+    if (day < task.date) return false;
+    if (task.repeat === "daily") return true;
+    const w = parse(day).getDay();
+    return w >= 1 && w <= 5;
+  }
+  const isDone = (task, day) => task.doneOn.includes(day);
+  const tasksFor = day => state.tasks.filter(x => appliesOn(x, day))
+    .sort((a,b) => (a.time||"99") < (b.time||"99") ? -1 : (a.time||"99") > (b.time||"99") ? 1 : 0);
+  const overdue = () => state.tasks.filter(x => x.repeat==="none" && x.date < todayISO() && !x.doneOn.includes(x.date));
+
+  function fmtTime(hm){
+    if (!hm) return "";
+    let [h,m] = hm.split(":").map(Number);
+    const ap = h>=12 ? "pm" : "am"; h = h%12 || 12;
+    return h+":"+pad(m)+" "+ap;
+  }
+  function isDueNow(task, day){
+    if (!task.time || day !== todayISO() || isDone(task, day)) return false;
+    const now = new Date(); return task.time <= pad(now.getHours())+":"+pad(now.getMinutes());
+  }
+
+  const checkSVG = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.6" style="color:var(--surface)"><path d="M3 8.5l3.2 3L13 4.5"/></svg>';
+
+  function taskLI(task, day, opts={}){
+    const li = document.createElement("li");
+    const done = isDone(task, day);
+    li.className = "task" + (done ? " done" : "");
+    const chips = [];
+    if (task.time) chips.push('<span class="time">'+fmtTime(task.time)+'</span>');
+    chips.push('<span class="tag" style="--c:var(--t-'+task.tag+')">'+TAGS[task.tag]+'</span>');
+    if (task.repeat==="daily") chips.push('<span class="chip rep">Every day</span>');
+    if (task.repeat==="weekdays") chips.push('<span class="chip rep">Weekdays</span>');
+    if (opts.from) chips.push('<span class="chip due">From '+parse(opts.from).toLocaleDateString(undefined,{month:"short",day:"numeric"})+'</span>');
+    else if (isDueNow(task, day)) chips.push('<span class="chip due">Due</span>');
+    if (task.example) chips.push('<span class="chip ex">Example</span>');
+    li.innerHTML =
+      '<button class="check" aria-label="'+(done?"Mark not done":"Mark done")+'">'+checkSVG+'</button>'+
+      '<div class="body"><div class="title"></div><div class="meta">'+chips.join("")+'</div></div>'+
+      '<button class="del" aria-label="Delete task">×</button>';
+    li.querySelector(".title").textContent = task.title;
+    li.querySelector(".check").onclick = () => {
+      if (done) task.doneOn = task.doneOn.filter(d => d!==day); else task.doneOn.push(day);
+      save(); render();
+    };
+    li.querySelector(".del").onclick = () => {
+      state.tasks = state.tasks.filter(x => x.id!==task.id); save(); render();
+    };
+    return li;
+  }
+
+  function renderWeek(){
+    const d = parse(sel); const start = addDays(sel, -((d.getDay()+6)%7)); // Monday start
+    const wk = $("week"); wk.innerHTML = "";
+    for (let i=0;i<7;i++){
+      const day = addDays(start,i), dd = parse(day), list = tasksFor(day);
+      const b = document.createElement("button");
+      b.className = "day" + (day===todayISO()?" today":"") + (day===sel?" sel":"");
+      b.setAttribute("aria-label", dd.toDateString()+", "+list.length+" tasks");
+      const dots = list.slice(0,5).map(x => '<i class="'+(isDone(x,day)?"done":"")+'"></i>').join("");
+      b.innerHTML = '<span class="dw">'+dd.toLocaleDateString(undefined,{weekday:"short"})+'</span><span class="dn">'+dd.getDate()+'</span><span class="dots">'+dots+'</span>';
+      b.onclick = () => { sel = day; render(); };
+      wk.appendChild(b);
+    }
+  }
+
+  function render(){
+    const today = todayISO(), d = parse(sel);
+    $("heading").textContent = d.toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"});
+    $("eyebrow").textContent = sel===today ? "Today" : sel===addDays(today,1) ? "Tomorrow" : sel===addDays(today,-1) ? "Yesterday" : d.getFullYear();
+    $("listLabel").textContent = sel===today ? "Today's list" : "List for this day";
+    renderWeek();
+
+    const list = tasksFor(sel), done = list.filter(x => isDone(x, sel)).length;
+    $("barFill").style.width = list.length ? (done/list.length*100)+"%" : "0";
+    $("pct").textContent = done+" of "+list.length+" done";
+    $("listCount").textContent = list.length ? list.length : "";
+
+    const ul = $("list"); ul.innerHTML = "";
+    if (mode === "loading"){
+      ul.innerHTML = '<li class="empty">Loading your tasks…</li>';
+    } else if (!list.length){
+      ul.innerHTML = '<li class="empty">Nothing planned for this day. Type a task above and press Add.</li>';
+    } else list.forEach(x => ul.appendChild(taskLI(x, sel)));
+
+    const od = sel===today ? overdue() : [];
+    $("overdueSec").hidden = !od.length;
+    const ol = $("overdueList"); ol.innerHTML = "";
+    od.forEach(x => ol.appendChild(taskLI(x, x.date, {from:x.date})));
+    $("overdueCount").textContent = od.length || "";
+
+    renderFooter();
+    checkReminders();
+  }
+
+  function renderFooter(){
+    $("clearEx").hidden = !state.tasks.some(x => x.example);
+    let msg = mode === "cloud" ? "Synced to your account" + (myName ? " (" + myName + ")" : "") + ", on every device."
+            : mode === "local" ? "Saved in this browser. Use Export and Import to move tasks to another device."
+            : "Connecting…";
+    $("storeNote").textContent = note || msg;
+  }
+
+  function checkReminders(){
+    const today = todayISO();
+    const due = tasksFor(today).filter(x => isDueNow(x, today) && !state.dismissed[x.id+today]);
+    if (!due.length){ $("toast").hidden = true; return; }
+    $("toastText").textContent = due.length===1 ? "Reminder: "+due[0].title+" ("+fmtTime(due[0].time)+")" : due.length+" tasks are due now";
+    $("toast").hidden = false;
+    $("toastClose").onclick = () => { due.forEach(x => state.dismissed[x.id+today]=1); save(); $("toast").hidden = true; };
+  }
+
+  $("addForm").addEventListener("submit", e => {
+    e.preventDefault();
+    if (mode === "loading") return;
+    const title = $("newTitle").value.trim();
+    if (!title){ $("newTitle").focus(); return; }
+    state.tasks.push({id:uid(), title, time:$("newTime").value, tag:$("newTag").value, repeat:$("newRepeat").value, date:sel, doneOn:[]});
+    $("newTitle").value = ""; $("newTime").value = ""; $("newRepeat").value = "none";
+    save(); render(); $("newTitle").focus();
+  });
+  $("prev").onclick = () => { sel = addDays(sel,-7); render(); };
+  $("next").onclick = () => { sel = addDays(sel,7); render(); };
+  $("todayBtn").onclick = () => { sel = todayISO(); render(); };
+  $("clearEx").onclick = () => { state.tasks = state.tasks.filter(x => !x.example); save(); render(); };
+
+  let lastDay = todayISO();
+  setInterval(() => { if (todayISO()!==lastDay){ if (sel===lastDay) sel = todayISO(); lastDay = todayISO(); } render(); }, 30000);
+
+  function goLocal(){
+    mode = "local";
+    state = clean(readLocal());
+    render();
+  }
+
+  // Export / import so tasks can move between devices or be backed up.
+  $("exportBtn").onclick = () => {
+    const blob = new Blob([JSON.stringify(state, null, 2)], {type:"application/json"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "daily-checklist-" + todayISO() + ".json";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  };
+  $("importBtn").onclick = () => $("importFile").click();
+  $("importFile").onchange = e => {
+    const f = e.target.files[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = () => {
+      try {
+        const incoming = clean(JSON.parse(r.result));
+        const have = new Set(state.tasks.map(x => x.id));
+        incoming.tasks.forEach(x => { if (!have.has(x.id)) state.tasks.push(x); });
+        note = "Imported " + incoming.tasks.length + " tasks.";
+        save(); render();
+        setTimeout(() => { note = ""; renderFooter(); }, 4000);
+      } catch(err){ note = "That file isn't a Daily Checklist export."; renderFooter(); }
+      e.target.value = "";
+    };
+    r.readAsText(f);
+  };
+
+  goLocal();
+})();
+</script>
+
+</body>
+</html>
